@@ -1,46 +1,27 @@
-from ursina import Entity
-from voxel import Voxel
-from utils import CHUNK_SIZE, block_colors, FACE_DEFS, BLOCK_AIR
+from ursina import Entity, MeshCollider
+from chunk_mesh import generate_chunk_mesh
+from utils import CHUNK_SIZE, block_colors
 
 class Chunk(Entity):
-    def __init__(self, cx, cz, chunk_data, chunk_blocks):
-        super().__init__(parent=None, position=(cx*CHUNK_SIZE,0,cz*CHUNK_SIZE))
+    def __init__(self, cx, cz, chunk_data):
         self.cx = cx
         self.cz = cz
         self.chunk_data = chunk_data  # {(x,y,z): block_type}
-        self.chunk_blocks = chunk_blocks  # {(x,y,z): Voxel}
+        mesh = generate_chunk_mesh(chunk_data, block_colors)
+        super().__init__(model=mesh, position=(cx * CHUNK_SIZE, 0, cz * CHUNK_SIZE))
+        self.collider = MeshCollider(self, mesh)  # <-- Add this line!
         self.active = True
+
+    def update_mesh(self, chunk_data):
+        self.chunk_data = chunk_data
+        mesh = generate_chunk_mesh(chunk_data, block_colors)
+        self.model = mesh
+        self.collider = MeshCollider(self, mesh)  # <-- Update collider to match mesh
 
     def show(self):
+        self.visible = True
         self.active = True
-        for voxel in self.chunk_blocks.values():
-            voxel.visible = True
 
     def hide(self):
+        self.visible = False
         self.active = False
-        for voxel in self.chunk_blocks.values():
-            voxel.visible = False
-
-    def update_colliders(self, player_pos):
-        # Only enable colliders for blocks within 2 units of player
-        px, py, pz = player_pos
-        for voxel in self.chunk_blocks.values():
-            vx, vy, vz = voxel.grid_pos
-            if abs(vx - px) < 2 and abs(vy - py) < 2 and abs(vz - pz) < 2:
-                voxel.collider = 'box'
-            else:
-                voxel.collider = None
-
-    def reset(self, cx, cz, chunk_data, chunk_blocks):
-        # Move the chunk to new coordinates and update voxels
-        self.cx = cx
-        self.cz = cz
-        self.chunk_data = chunk_data
-        # Remove old voxels
-        for voxel in self.chunk_blocks.values():
-            voxel.disable()  # or destroy(), but for pooling, disable is better
-        self.chunk_blocks = chunk_blocks
-        # Enable new voxels
-        for voxel in self.chunk_blocks.values():
-            voxel.enable()
-        self.active = True

@@ -3,7 +3,7 @@ from math import floor
 from ursina import scene, camera
 from utils import *
 from ursina import invoke
-from chunk import Chunk
+from voxel_chunk import Chunk
 from voxel import Voxel
 
 import threading

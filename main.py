@@ -1,8 +1,9 @@
-from ursina import Ursina, Sky, application, window, Text, DirectionalLight, AmbientLight, color, Entity, raycast, camera
+from ursina import Ursina, Sky, application, window, Text, DirectionalLight, AmbientLight, color, Entity, raycast, camera, Vec3
 from player import Player
 from terrain import Terrain
 from input_handler import handle_input
 from utils import block_types
+from math import floor
 
 app = Ursina()
 application.target_fps = 60
@@ -41,8 +42,8 @@ def update():
 
     hit_info = raycast(camera.world_position, camera.forward, distance=8, ignore=[player])
     if hit_info.hit:
-        block_pos = tuple(int(round(x)) for x in hit_info.world_point - hit_info.normal / 2)
-        highlighter.position = block_pos
+        block_pos = tuple(int(floor(x)) for x in hit_info.world_point - hit_info.normal * 0.5)
+        highlighter.position = Vec3(block_pos) + Vec3(0.5, 0.5, 0.5)  # <-- Fix: center the highlighter
         highlighter.visible = True
     else:
         highlighter.visible = False

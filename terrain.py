@@ -47,12 +47,23 @@ class Terrain:
         # Optionally handle unloading far chunks here
 
     def place_block(self, pos, block_type):
+        print("Placing block at:", pos)
         self.placed[pos] = block_type
         cx, cz = chunk_coords(pos)
         self.request_chunk(cx, cz)
 
     def mine_block(self, pos):
+        print("Mining block at:", pos)
         self.mined.add(pos)
         cx, cz = chunk_coords(pos)
         self.request_chunk(cx, cz)
         # For neighbor blocks, you may want to update their chunk if on edge
+
+    def get_block_type(self, pos):
+        if pos in self.mined:
+            return 0  # air
+        if pos in self.placed:
+            return self.placed[pos]
+        wx, y, wz = pos
+        h = sample_height(wx, wz)
+        return compute_strata(y, h)

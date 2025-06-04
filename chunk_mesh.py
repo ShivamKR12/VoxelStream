@@ -1,4 +1,4 @@
-from ursina import Entity, Vec3, color
+from ursina import Vec3, color
 from ursina.mesh_importer import Mesh
 
 def generate_chunk_mesh(voxel_data, block_colors, default_color=color.green):

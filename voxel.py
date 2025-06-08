@@ -1,39 +1,60 @@
-from ursina import Entity, Mesh, Vec3, Vec2
-from ursina.shaders import lit_with_shadows_shader
-from utils import block_colors, FACE_DEFS
+from ursina import Entity, Vec3, Mesh
 
 class Voxel(Entity):
-    def __init__(self, position, block_type):
-        super().__init__(
-            parent=None,  # Set parent later by chunk
-            position=position,
-            model=None,
-            texture='white_cube',
-            shader=lit_with_shadows_shader,  # Use a shader for lighting
-            scale=Vec3(1, 1, 1),  # Scale to 1x1x1
-            collider=None,  # Enable as needed
-            color=block_colors[block_type],
-            visible=True
-        )
-        self.grid_pos = position
+    def __init__(self, position=(0,0,0), block_type=0, block_colors=None, exposed_faces=None, **kwargs):
+        # Validate input types
+        if not isinstance(position, (tuple, list, Vec3)):
+            print(f"Warning: Invalid position for Voxel: {position}, defaulting to (0,0,0)")
+            position = (0, 0, 0)
+        if block_colors is None or not isinstance(block_colors, dict):
+            print("Warning: block_colors not provided or invalid, defaulting to empty dict")
+            block_colors = {}
+        if exposed_faces is not None and not isinstance(exposed_faces, (list, tuple)):
+            print(f"Warning: Invalid exposed_faces: {exposed_faces}, defaulting to []")
+            exposed_faces = []
+
+        # Safely get color
+        color = block_colors.get(block_type, None)
+        if color is None:
+            print(f"Warning: block_type {block_type} not found in block_colors. Using default (white).")
+            from ursina import color as ursina_color
+            color = ursina_color.white
+
+        Entity.__init__(self, position=position, **kwargs)
         self.block_type = block_type
 
-    def update_mesh(self, exposed_faces):
-        # exposed_faces: list of normals (Vec3) that should be rendered
-        verts, tris, uvs, normals = [], [], [], []
-        idx = 0
-        offset = Vec3(0.5,0.5,0.5)
-        for normal, corners in FACE_DEFS.values():
-            if normal not in exposed_faces:
-                continue
-            for c in corners:
-                verts.append(c - offset)
-                uvs.append(Vec2(c.x, c.y))
-                normals.append(normal)  # <--- Add this line
-            tris += [idx,idx+2,idx+1, idx,idx+3,idx+2]
-            idx += 4
-        if verts:
-            self.model = Mesh(vertices=verts, triangles=tris, uvs=uvs, normals=normals)  # <--- Pass normals!
-            self.model.disable_backface_culling = False
+        # Only build mesh if exposed_faces are provided
+        if exposed_faces:
+            try:
+                verts, tris, uvs, colors = [], [], [], []
+                for normal, face in exposed_faces:
+                    if not isinstance(face, (list, tuple)) or len(face) != 4:
+                        print(f"Warning: Invalid face format: {face}")
+                        continue
+                    i = len(verts)
+                    verts.extend([Vec3(p) + Vec3(*position) for p in face])
+                    tris.extend([i, i+2, i+1, i, i+3, i+2])
+                    uvs.extend([(0,0),(1,0),(1,1),(0,1)])
+                    colors.extend([color]*4)
+                if verts:
+                    mesh = Mesh(vertices=verts, triangles=tris, uvs=uvs, colors=colors, mode='triangle')
+                    mesh.disable_backface_culling = False
+                    self.model = mesh
+                else:
+                    self.model = None
+            except Exception as e:
+                print(f"Error generating voxel mesh: {e}")
+                self.model = None
         else:
-            self.model = None
+            self.model = None  # No exposed faces, invisible
+
+        # Collider is optional and should be set if needed
+        self.collider = 'box' if self.model is not None else None
+
+    # Optionally, add a safe update method if needed
+    def update(self):
+        try:
+            # Placeholder for future logic
+            pass
+        except Exception as e:
+            print(f"Error in Voxel.update: {e}")
